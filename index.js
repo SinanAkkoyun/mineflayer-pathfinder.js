@@ -39,8 +39,9 @@ function inject (bot) {
   bot.pathfinder.thinkTimeout = 5000 // ms
   bot.pathfinder.tickTimeout = 40 // ms, amount of thinking per tick (max 50 ms)
   bot.pathfinder.searchRadius = -1 // in blocks, limits of the search area, -1: don't limit the search
-  bot.pathfinder.enablePathShortcut = false // disabled by default as it can cause bugs in specific configurations
+  bot.pathfinder.enablePathShortcut = true // disabled by default as it can cause bugs in specific configurations
   bot.pathfinder.LOSWhenPlacingBlocks = true
+  bot.pathfinder.bunnyjumping = true // Let's the bot jump while sprinting
 
   bot.pathfinder.bestHarvestTool = (block) => {
     const availableTools = bot.inventory.items()
@@ -332,8 +333,9 @@ function inject (bot) {
 
     // Force horizontal velocity to 0 (otherwise inertia can move us too far)
     // Kind of cheaty, but the server will not tell the difference
-    bot.entity.velocity.x = 0
-    bot.entity.velocity.z = 0
+    
+    // bot.entity.velocity.x = 0
+    // bot.entity.velocity.z = 0
 
     const blockX = Math.floor(bot.entity.position.x) + 0.5
     const blockZ = Math.floor(bot.entity.position.z) + 0.5
@@ -612,7 +614,38 @@ function inject (bot) {
       bot.setControlState('jump', true)
       bot.setControlState('sprint', false)
     } else if (stateMovements.allowSprinting && physics.canStraightLine(path, true)) {
-      bot.setControlState('jump', false)
+      // bot.setControlState('jump', bot.pathfinder.bunnyjumping) //todo
+      let canJump = false
+      // console.log(path)
+      
+      if(bot.pathfinder.bunnyjumping) {
+        /*
+        canJump = physics.canSprintJump(path)
+
+        if(bot.entity.lastOnGround !== bot.entity.onGround) {
+          bot.entity.lastOnGround = bot.entity.onGround
+
+          // Jumping increases velocity and alters the path, so we need to recalculate it after each jump
+          if(!bot.entity.onGround) {
+            console.log('jumping')
+            setTimeout(() => {
+              bot.pathfinder.setGoal(bot.pathfinder.goal)
+            }, (100 / 20) * 1000)
+          }
+        }
+        */
+
+        if(path.length > 0) {
+          if(bot.entity.position.distanceTo({
+            x: path[0].x,
+            y: path[0].y,
+            z: path[0].z
+          }) > 4) {
+            canJump = true
+          }
+        }
+      }
+      bot.setControlState('jump', canJump)
       bot.setControlState('sprint', true)
     } else if (stateMovements.allowSprinting && physics.canSprintJump(path)) {
       bot.setControlState('jump', true)
@@ -627,6 +660,8 @@ function inject (bot) {
       bot.setControlState('forward', false)
       bot.setControlState('sprint', false)
     }
+
+    // if(bot.)
 
     // check for futility
     if (performance.now() - lastNodeTime > 3500) {
